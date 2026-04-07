@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+import os
+import pathlib
 import sys
 
 import clingo
@@ -71,4 +73,11 @@ def run(problem_path: str, *control_files: str):
 
 
 if __name__ == "__main__":
-    run(*sys.argv[1:])
+    dir = pathlib.Path(__file__).parent
+    run(
+        str(dir / "hdf5.lp"),
+        str(dir / "concretize.lp"),
+        str(dir / "direct_dependency.lp"),
+        str(dir / "heuristic.lp"),
+        str(dir / "libc_compatibility.lp"),
+    )
