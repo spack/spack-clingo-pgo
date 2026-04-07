@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 
-import os
 import pathlib
 import sys
 
@@ -73,11 +72,11 @@ def run(problem_path: str, *control_files: str):
 
 
 if __name__ == "__main__":
-    dir = pathlib.Path(__file__).parent
+    share = pathlib.Path(__file__).parent.parent / "share"
     run(
-        str(dir / "hdf5.lp"),
-        str(dir / "concretize.lp"),
-        str(dir / "direct_dependency.lp"),
-        str(dir / "heuristic.lp"),
-        str(dir / "libc_compatibility.lp"),
+        str(share / "hdf5.lp"),
+        str(share / "concretize.lp"),
+        str(share / "direct_dependency.lp"),
+        str(share / "heuristic.lp"),
+        str(share / "libc_compatibility.lp"),
     )
