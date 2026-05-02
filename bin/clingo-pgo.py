@@ -26,9 +26,6 @@ def run(problem_path: str, *control_files: str):
         models.append((model.cost, model.symbols(shown=True, terms=True)))
 
     with control.solve(on_model=on_model, async_=True) as handle:
-        finished = False
-        while not finished:
-            finished = handle.wait(1.0)
         solve_result = handle.get()
 
     if not solve_result.satisfiable:
