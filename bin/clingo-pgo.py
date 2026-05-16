@@ -1,23 +1,57 @@
 #!/usr/bin/env python3
 
+import importlib
 import pathlib
 import sys
 
 import clingo
 
+# clingo 6 (the wip-20 rewrite) split the module into submodules and dropped the
+# top-level Control / configuration API. Detect it the same way Spack's solver
+# does (spack/lib/spack/spack/solver/core.py: clingo_v6()).
+CLINGO_V6 = not hasattr(clingo, "Control")
 
-def run(problem_path: str, *control_files: str):
+
+def make_control():
+    """Create a Control configured with the tweety/Domain/usc settings, for
+    either the legacy clingo API or the clingo 6 (wip-20) API."""
+    if CLINGO_V6:
+        library = importlib.import_module("clingo.core").Library()
+        # clingo 6 moves solver configuration to command-line options, and its
+        # grounder no longer implicitly projects anonymous variables occurring
+        # only in negative literals -- the corpus relies on that projection.
+        options = [
+            "--project-anonymous",
+            "--configuration=tweety",
+            "--heuristic=Domain",
+            "--opt-strategy=usc",
+        ]
+        return importlib.import_module("clingo.control").Control(library, options)
+
     control = clingo.Control()
     control.configuration.configuration = "tweety"
     control.configuration.solver.heuristic = "Domain"
     control.configuration.solver.opt_strategy = "usc"
+    return control
+
+
+def add_program(control, problem, control_files):
+    """Feed the problem string and the control program files to the Control."""
+    if CLINGO_V6:
+        control.parse_string(problem)
+        control.parse_files(list(control_files))
+    else:
+        control.add("base", [], problem)
+        for path in control_files:
+            control.load(path)
+
+
+def run(problem_path: str, *control_files: str):
+    control = make_control()
 
     with open(problem_path, "r") as f:
         problem = f.read()
-    control.add("base", [], problem)
-
-    for path in control_files:
-        control.load(path)
+    add_program(control, problem, control_files)
 
     control.ground([("base", [])])
     models = []
@@ -31,7 +65,11 @@ def run(problem_path: str, *control_files: str):
         print("UNSATISFIABLE")
         sys.exit(1)
 
-    _ = control.statistics
+    # Exercise the statistics accessor.
+    if CLINGO_V6:
+        _ = control.stats.nestify()
+    else:
+        _ = control.statistics
 
     if models:
         min_cost, best_model = min(models)
@@ -58,9 +96,9 @@ def run(problem_path: str, *control_files: str):
                     for arg in args:
                         try:
                             _ = arg.string
-                        except RuntimeError:
+                        except (RuntimeError, ValueError):
                             _ = str(arg)
-            except RuntimeError:
+            except (RuntimeError, ValueError):
                 pass
 
         for attr in sorted(attrs)[:20]:
